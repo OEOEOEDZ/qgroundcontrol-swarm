@@ -62,22 +62,35 @@ Rectangle {
         }
     }
 
-    // Altitude absolue -> calcul du delta par rapport a l'altitude relative actuelle
+    // MAVLink DO_REPOSITION with absolute AMSL altitude
+    // ASL = home altitude + target AGL
     function applyAltitude() {
         for (var i = 0; i < _vehicles.count; i++) {
             var v = _vehicles.get(i)
             if (!isSelected(v.id) || !v.armed) continue
             if (v.altitudeRelative.value < 0.5) continue
-            var amslAlt = v.altitudeAMSL.value - v.altitudeRelative.value + takeoffAlt
+            var delta = takeoffAlt - v.altitudeRelative.value
+            v.guidedModeChangeAltitude(delta, false)
+        }
+    }
+    function applyAltitude_UNUSED() {
+        for (var i = 0; i < _vehicles.count; i++) {
+            var v = _vehicles.get(i)
+            if (!isSelected(v.id) || !v.armed) continue
+            if (v.altitudeRelative.value < 0.5) continue
+            var homeAlt  = v.altitudeAMSL.value - v.altitudeRelative.value
+            var targetAMSL = homeAlt + takeoffAlt
             v.sendMavCommand(
-                1, 192, true,
+                1,
+                192,
+                true,
                 -1,
+                1,
                 0,
                 0,
-                -1,
                 v.coordinate.latitude,
                 v.coordinate.longitude,
-                amslAlt
+                targetAMSL
             )
         }
     }
@@ -113,9 +126,9 @@ Rectangle {
                 bestId = v.id
         }
         if (bestId !== leaderId) {
-            if      (leaderId === -1) leaderReason = "Election initiale -> Drone " + bestId
-            else if (bestId   === -1) leaderReason = "Aucun drone actif"
-            else                      leaderReason = "Failover : Drone " + leaderId + " perdu -> Drone " + bestId
+            if      (leaderId === -1) leaderReason = "Initial election -> Drone " + bestId
+            else if (bestId   === -1) leaderReason = "No active drone"
+            else                      leaderReason = "Failover: Drone " + leaderId + " lost -> Drone " + bestId
             leaderId = bestId
         }
     }
@@ -237,12 +250,12 @@ Rectangle {
 
                             Repeater {
                                 model: [
-                                    { label: "LAT",   val: fmt(_drone.coordinate.latitude,  6) },
-                                    { label: "LON",   val: fmt(_drone.coordinate.longitude, 6) },
-                                    { label: "ALT m", val: fmt(_drone.altitudeRelative.value, 1) },
-                                    { label: "SPD",   val: fmt(_drone.groundSpeed.value,    1) },
-                                    { label: "CAP",   val: fmt(_drone.heading.value,        0) },
-                                    { label: "BAT %", val: (function() {
+                                    { label: "LAT",    val: fmt(_drone.coordinate.latitude,    6) },
+                                    { label: "LON",    val: fmt(_drone.coordinate.longitude,   6) },
+                                    { label: "ALT(m)", val: fmt(_drone.altitudeRelative.value, 1) },
+                                    { label: "SPD",    val: fmt(_drone.groundSpeed.value,      1) },
+                                    { label: "HDG",    val: fmt(_drone.heading.value,          0) },
+                                    { label: "BAT(%)", val: (function() {
                                         try { return _drone.batteries.count > 0 ?
                                             fmt(_drone.batteries.get(0).percentRemaining.value, 0) : "--"
                                         } catch(e) { return "--" } })() }
@@ -261,7 +274,7 @@ Rectangle {
                                         QGCLabel {
                                             text: modelData.val
                                             color: {
-                                                if (modelData.label !== "BAT %") return "#DDDDDD"
+                                                if (modelData.label !== "BAT(%)") return "#DDDDDD"
                                                 var b = parseInt(modelData.val)
                                                 if (isNaN(b)) return "#DDDDDD"
                                                 return b > 50 ? "#00FF00" : b > 20 ? "#FFA500" : "#FF4444"
@@ -297,12 +310,12 @@ Rectangle {
                         font.pointSize: ScreenTools.defaultFontPointSize * 0.85
                     }
                     QGCLabel {
-                        text: leaderId >= 0 ? "Leader : Drone " + leaderId : "Aucun leader"
+                        text: leaderId >= 0 ? "Leader: Drone " + leaderId : "No active leader"
                         color: "#fbbf24"
                         font.pointSize: ScreenTools.defaultFontPointSize * 0.85
                     }
                     QGCLabel {
-                        text: "Critere : en vol > arme > desarme — failover auto"
+                        text: "Criteria: in-flight > armed > disarmed — auto failover"
                         color: "#555"; font.pointSize: ScreenTools.defaultFontPointSize * 0.75
                     }
                     QGCLabel {
@@ -328,14 +341,14 @@ Rectangle {
                     spacing: 6
 
                     QGCLabel {
-                        text: "PARAMETRES DE VOL"; color: "#AAAAAA"; font.bold: true
+                        text: "FLIGHT PARAMETERS"; color: "#AAAAAA"; font.bold: true
                         font.pointSize: ScreenTools.defaultFontPointSize * 0.85
                     }
 
                     RowLayout {
                         width: parent.width
                         QGCLabel {
-                            text: "Altitude cible"; color: "#888"
+                            text: "Target altitude (AGL)"; color: "#888"
                             font.pointSize: ScreenTools.defaultFontPointSize * 0.85
                             Layout.fillWidth: true
                         }
@@ -353,14 +366,14 @@ Rectangle {
                     RowLayout {
                         width: parent.width
                         QGCButton {
-                            text: "DECOLLAGE " + takeoffAlt.toFixed(0) + "m"
+                            text: "TAKEOFF " + takeoffAlt.toFixed(0) + "m"
                             Layout.fillWidth: true
                             enabled: selectedIds.length > 0
                             opacity: selectedIds.length > 0 ? 1.0 : 0.4
                             onClicked: swarmDashboard.dispatch("takeoff")
                         }
                         QGCButton {
-                            text: "CHANGER ALT"
+                            text: "CHANGE ALT"
                             Layout.fillWidth: true
                             enabled: selectedIds.length > 0
                             opacity: selectedIds.length > 0 ? 1.0 : 0.4
@@ -371,7 +384,7 @@ Rectangle {
                     RowLayout {
                         width: parent.width
                         QGCLabel {
-                            text: "Vitesse max"; color: "#888"
+                            text: "Max speed"; color: "#888"
                             font.pointSize: ScreenTools.defaultFontPointSize * 0.85
                             Layout.fillWidth: true
                         }
@@ -392,16 +405,16 @@ Rectangle {
 
             RowLayout {
                 width: swarmColumn.width; spacing: 4
-                QGCButton { text: "TOUS"; Layout.fillWidth: true; onClicked: swarmDashboard.selectAll() }
-                QGCButton { text: "AUCUN"; Layout.fillWidth: true; onClicked: swarmDashboard.selectNone() }
+                QGCButton { text: "ALL";    Layout.fillWidth: true; onClicked: swarmDashboard.selectAll() }
+                QGCButton { text: "NONE";   Layout.fillWidth: true; onClicked: swarmDashboard.selectNone() }
                 QGCButton { text: "LEADER"; Layout.fillWidth: true; onClicked: swarmDashboard.selectLeader() }
             }
 
             QGCLabel {
                 text: {
-                    if (selectedIds.length === 0) return "COMMANDES — aucun drone"
-                    if (selectedIds.length === _vehicles.count) return "COMMANDES — tous"
-                    return "COMMANDES — Drone(s) " + selectedIds.join(", ")
+                    if (selectedIds.length === 0) return "COMMANDS — no drone selected"
+                    if (selectedIds.length === _vehicles.count) return "COMMANDS — all drones"
+                    return "COMMANDS — Drone(s) " + selectedIds.join(", ")
                 }
                 color: "#AAAAAA"; font.pointSize: ScreenTools.defaultFontPointSize * 0.9
             }
