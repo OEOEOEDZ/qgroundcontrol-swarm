@@ -13,6 +13,18 @@ Rectangle {
 
     property var  _vehicles:      QGroundControl.multiVehicleManager.vehicles
     property var  selectedIds:    []
+    property int  activeCamDrone: -1
+
+    function switchCamera(droneId) {
+        var ports = { 1: "0.0.0.0:5600", 2: "0.0.0.0:5601", 3: "0.0.0.0:5602" }
+        var port = ports[droneId]
+        if (!port) return
+        QGroundControl.settingsManager.videoSettings.videoSource.rawValue =
+            QGroundControl.settingsManager.videoSettings.udp264VideoSource
+        QGroundControl.settingsManager.videoSettings.udpUrl.rawValue = port
+        activeCamDrone = droneId
+        console.log("Camera switched to Drone " + droneId + " on " + port)
+    }
     property int  leaderId:       -1
     property string leaderReason: ""
     property real takeoffAlt:     10
@@ -231,6 +243,25 @@ Rectangle {
                                 text:  _drone && _drone.armed ? "ARMED" : "DISARMED"
                                 color: _drone && _drone.armed ? "#00FF00" : "#FF4444"
                                 font.pointSize: ScreenTools.defaultFontPointSize * 0.85
+                            }
+
+                            Rectangle {
+                                width: 32; height: 16; radius: 8
+                                color: activeCamDrone === _drone.id ? "#1a5c1a" : "#1a1a3a"
+                                border.color: activeCamDrone === _drone.id ? "#00FF00" : "#444"
+                                border.width: 1
+                                QGCLabel {
+                                    anchors.centerIn: parent
+                                    text: "CAM"
+                                    color: activeCamDrone === _drone.id ? "#00FF00" : "#888"
+                                    font.pointSize: ScreenTools.defaultFontPointSize * 0.7
+                                    font.bold: true
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: swarmDashboard.switchCamera(_drone.id)
+                                    cursorShape: Qt.PointingHandCursor
+                                }
                             }
 
                             Rectangle {
