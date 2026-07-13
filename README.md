@@ -2,8 +2,11 @@
 **Multi-UAV Swarm Management Extension for QGroundControl**
 
 Internship project — USTH Hanoi 2026
+
 Student: Yacine Abdi (ITS2, EPISEN/UPEC)
+
 Supervisor: Prof. Pham Xuan Tung
+
 GitHub: github.com/OEOEOEDZ/qgroundcontrol-swarm
 
 ---
