@@ -1,4 +1,3 @@
-cd ~/swarm-only && cp ~/qgroundcontrol/src/FlyView/SwarmDashboard.qml . && cp ~/swarm_camera_stream.py . && cat > README.md << 'ENDREADME'
 # QGroundControl — SwarmDashboard v2
 **Multi-UAV Swarm Management Extension for QGroundControl**
 
