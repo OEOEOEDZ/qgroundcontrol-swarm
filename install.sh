@@ -2,8 +2,10 @@
 # SwarmDashboard v2 — Automatic installer
 # Usage: bash install.sh /path/to/qgroundcontrol
 set -e
+
 QGC_PATH="${1:-$HOME/qgroundcontrol}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "Installing SwarmDashboard into: $QGC_PATH"
 
 if [ ! -d "$QGC_PATH/src/FlyView" ]; then
@@ -22,7 +24,9 @@ cp "$SCRIPT_DIR/CMakeLists.txt" "$QGC_PATH/src/FlyView/"
 echo "Copied CMakeLists.txt"
 
 # 3. Inject SwarmDashboard into existing FlyViewWidgetLayer.qml
+# We do NOT replace the file — we inject only the SwarmDashboard block
 WIDGET_LAYER="$QGC_PATH/src/FlyView/FlyViewWidgetLayer.qml"
+
 if grep -q "SwarmDashboard" "$WIDGET_LAYER"; then
     echo "SwarmDashboard already present in FlyViewWidgetLayer.qml — skipping injection"
 else
@@ -51,7 +55,7 @@ echo ""
 echo "Installation complete."
 echo ""
 echo "Now rebuild QGC:"
-echo "  cd $QGC_PATH/build && ninja -j$(nproc)"
+echo "  cd $QGC_PATH/build && ninja -j\$(nproc)"
 echo ""
 echo "Then launch QGC:"
 echo "  export DISPLAY=:1"
