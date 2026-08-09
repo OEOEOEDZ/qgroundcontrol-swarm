@@ -4,7 +4,7 @@ SwarmDashboard Synthetic Camera Streamer
 Generates a synthetic HUD frame per drone showing real telemetry
 and streams it as H.264 RTP UDP to QGC VideoReceiver.
 Drone 1 -> port 5600
-Drone 2 -> port 5601  
+Drone 2 -> port 5601
 Drone 3 -> port 5602
 """
 
